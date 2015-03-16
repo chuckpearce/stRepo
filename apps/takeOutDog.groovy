@@ -22,9 +22,15 @@ definition(
 )
 
 preferences {
+	section("Auto Trigger When"){
+		input("lock", "capability.lock", title: "Lock", required: false)
+		input("timeStart", "time", title: "Time Start", required: false)
+		input("timeEnd", "time", title: "Time End", required: false)
+		input("modes", "mode", multiple: true, title: "Modes", required: false)
+	}
 	section("Trigger When Enabled"){
 		input("modeEnabled", "mode", title: "Mode", required: true)
-		input("lightsEnabled", "capability.switch", title: "Lights On", required: false)
+		input("lightsEnabled", "capability.switch", multiple: true, title: "Lights On", required: false)
 	}
 	section("Return Trigger"){
 		input(name: "delay", title: "Delay Before Returned", type: "int", description: "in minutes", defaultValue: "10", required: false )
@@ -32,7 +38,7 @@ preferences {
 	}
 	section("Trigger When Enabled"){
 		input("modeReturn", "mode", title: "Mode", required: true)
-		input("lightsReturn", "capability.switch", title: "Lights Off", required: false)
+		input("lightsReturn", "capability.switch", multiple: true, title: "Lights Off", required: false)
 	}
 	section("General"){
 		input("actionName", "text", title: "Action Name", required: false, description: "Name used to reference this action", defaultValue: "Taking out the dog")
@@ -59,14 +65,36 @@ def updated() {
 }
 
 def initialize() { 
-
+	if (lock) {
+		subscribe(lock, "lock", startTakeOut)
+	}
 }
 
-def startTakeOut() {
-	
-	int closeCount = 0
+private getTimeOk() {
+	def result = true
+	if (timeStart && timeEnd) {
+		def currTime = now()
+		def start = timeToday(timeStart).time
+		def stop = timeToday(timeEnd).time
+		result = start < stop ? currTime >= start && currTime <= stop : currTime <= stop || currTime >= start
+	}
+	log.trace "timeOk = $result"
+	result
+}
 
-	setLocationMode(modeEnabled)
+private getModeOk() {
+	def result = !modes || modes.contains(location.mode)
+	log.trace "modeOk = $result"
+	result
+}
+
+def startTakeOut(lock) {
+	
+	if (lock && lock.value != "unlocked") {
+		return
+	}
+
+	int closeCount = 0
 
 	if (lightsEnabled) {
 		lightsEnabled?.on()
@@ -79,6 +107,8 @@ def startTakeOut() {
 	if (contact) {
 		subscribe(contact, "contact.closed", doorClosed)
 	}
+
+	setLocationMode(modeEnabled)
 
 }
 
