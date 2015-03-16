@@ -47,6 +47,8 @@ def installed() {
 }
 
 def uninstalled() {
+	unschedule()
+	unsubscribe()
 	def deleteDevices = getAllChildDevices()
 	deleteDevices.each { deleteChildDevice(it.deviceNetworkId) }
 }	
@@ -60,8 +62,7 @@ def initialize() {
 
 }
 
-def enable() {
-	send("$actionName, chaning mode to $modeEnabled")
+def startTakeOut() {
 	
 	int closeCount = 0
 
@@ -72,7 +73,7 @@ def enable() {
 	}
 
 	if (delay) {
-		runIn(60*delay, disable)
+		runIn(60*delay.toInteger(), endTakeOut)
 	}
 
 	if (contact) {
@@ -82,19 +83,17 @@ def enable() {
 }
 
 def doorClosed () {
-	doorClosed++
-	if (doorClosed >= 2) {
-		disable()
+	closeCount++
+	if (closeCount >= 2) {
+		endTakeOut()
 	}
 }
 
-def disable() {
+def endTakeOut() {
 	unschedule()
 	unsubscribe()
-
-	send("$actionName completed, chaning mode to $modeEnabled")
-	
-	child = getChildDevice("TakeOutDog");
+    
+	def child = getChildDevice("TakeOutDog");
 	child.updateDeviceStatus(0)
 
 	setLocationMode(modeReturn)
