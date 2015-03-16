@@ -22,28 +22,46 @@ definition(
 )
 
 preferences {
+    page(name: "TakeOutDog")
+}
+
+def TakeOutDog() {
+  dynamicPage(name:"TakeOutDog", title:"Take out Dog") {
+
+  	def phrases = location.helloHome?.getPhrases()*.label
+  	if (phrases) {
+    	phrases.sort()
+    }
+    
+    
 	section("Auto Trigger When"){
 		input("lock", "capability.lock", title: "Lock", required: false)
 		input("timeStart", "time", title: "Time Start", required: false)
 		input("timeEnd", "time", title: "Time End", required: false)
 		input("modes", "mode", multiple: true, title: "Modes", required: false)
 	}
-	section("Trigger When Enabled"){
-		input("modeEnabled", "mode", title: "Mode", required: true)
-		input("lightsEnabled", "capability.switch", multiple: true, title: "Lights On", required: false)
-	}
+	section("Actions When Enabled") {
+		if (phrases) {
+        	input name: "homePhrasesEnabled", type: "enum", title: "Home Mode Phrase", multiple: true,required: false, options: phrases, refreshAfterSelection: true
+		}
+		input name: "modeEnabled", type: "mode", title: "Mode", required: false
+		input name: "lightsEnabled", type: "capability.switch", multiple: true, title: "Lights On", required: false
+     
+    }
 	section("Return Trigger"){
 		input(name: "delay", title: "Delay Before Returned", type: "int", description: "in minutes", defaultValue: "10", required: false )
 		input(name: "contact", title: "Contact Detection", type: "capability.contactSensor", description: "Sensor to detect open/close two times", required: false )
 	}
-	section("Trigger When Enabled"){
-		input("modeReturn", "mode", title: "Mode", required: true)
-		input("lightsReturn", "capability.switch", multiple: true, title: "Lights Off", required: false)
-	}
-	section("General"){
-		input("actionName", "text", title: "Action Name", required: false, description: "Name used to reference this action", defaultValue: "Taking out the dog")
-	}
+    section("Trigger When Returned") {
+      if (phrases) {
+        input name: "homePhrasesReturn", type: "enum", title: "Home Mode Phrase", multiple: true,required: false, options: phrases, refreshAfterSelection: true
+      }
+		input name: "modeReturn", type: "mode", title: "Mode", required: false
+		input name: "lightsReturn", type: "capability.switch", multiple: true, title: "Lights Off", required: false
+    }
+  }
 }
+
 /* Initialization */
 def installed() {
     log.debug "Installed with settings: ${settings}"
@@ -65,6 +83,7 @@ def updated() {
 }
 
 def initialize() { 
+
 	if (lock) {
 		subscribe(lock, "lock", startTakeOut)
 	}
@@ -104,11 +123,17 @@ def startTakeOut(lock) {
 		runIn(60*delay.toInteger(), endTakeOut)
 	}
 
+	if (settings.homePhrasesEnabled) {
+      location.helloHome.execute(settings.homePhrasesEnabled)
+	}
+
 	if (contact) {
 		subscribe(contact, "contact.closed", doorClosed)
 	}
 
-	setLocationMode(modeEnabled)
+	if (modeEnabled) {
+		setLocationMode(modeEnabled)
+	}
 
 }
 
@@ -126,8 +151,14 @@ def endTakeOut() {
 	def child = getChildDevice("TakeOutDog");
 	child.updateDeviceStatus(0)
 
-	setLocationMode(modeReturn)
+	if (modeReturn) {
+		setLocationMode(modeReturn)
+	}
 
+	if (settings.homePhrasesReturn) {
+      location.helloHome.execute(settings.homePhrasesReturn)
+	}
+	
 	if (lightsReturn) {
 		lightsReturn?.off()
 	}
