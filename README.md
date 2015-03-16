@@ -1,2 +1,2 @@
 # stRepo
-SmartThings Apps/Device Types
+SmartThings Applications and Device Types
