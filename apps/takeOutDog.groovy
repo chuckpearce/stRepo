@@ -18,7 +18,8 @@ definition(
 	category: "Convenience",
 	iconUrl:   "http://i.imgur.com/kztKxez.png",
 	iconX2Url: "http://i.imgur.com/kztKxez.png",
-	iconX3Url: "http://i.imgur.com/kztKxez.png"
+	iconX3Url: "http://i.imgur.com/kztKxez.png",
+	"count": 0
 )
 
 preferences {
@@ -26,7 +27,7 @@ preferences {
 }
 
 def TakeOutDog() {
-  dynamicPage(name:"TakeOutDog", title:"Take out Dog") {
+  dynamicPage(name:"TakeOutDog", title:"Take out Dog", install: true, uninstall: true) {
 
   	def phrases = location.helloHome?.getPhrases()*.label
   	if (phrases) {
@@ -107,13 +108,14 @@ private getModeOk() {
 	result
 }
 
+
 def startTakeOut(lock) {
 	
 	if (lock && lock.value != "unlocked") {
 		return
 	}
 
-	int closeCount = 0
+	state.closeCount = 0
 
 	if (lightsEnabled) {
 		lightsEnabled?.on()
@@ -137,9 +139,10 @@ def startTakeOut(lock) {
 
 }
 
-def doorClosed () {
-	closeCount++
-	if (closeCount >= 2) {
+def doorClosed (evt) {
+	state.closeCount = state.closeCount + 1
+	log.debug "The close count is $state.closeCount"
+	if (state.closeCount >= 2) {
 		endTakeOut()
 	}
 }
