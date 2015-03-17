@@ -59,6 +59,7 @@ def TakeOutDog() {
       }
 		input name: "modeReturn", type: "mode", title: "Mode", required: false
 		input name: "lightsReturn", type: "capability.switch", multiple: true, title: "Lights Off", required: false
+		input name: "lockReturn", type: "capability.lock", title: "Lock Door", required: false
     }
   }
 }
@@ -164,6 +165,10 @@ def endTakeOut() {
 	
 	if (lightsReturn) {
 		lightsReturn?.off()
+	}
+
+	if (lockReturn) {
+		lockReturn.lock()
 	}
 
 }
