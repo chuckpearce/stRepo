@@ -33,8 +33,6 @@ def TakeOutDog() {
   	if (phrases) {
     	phrases.sort()
     }
-    
-    
 	section("Auto Trigger When"){
 		input("lock", "capability.lock", title: "Lock is Unlocked", required: false)
 		input("timeStart", "time", title: "Time Start", required: false)
@@ -60,14 +58,25 @@ def TakeOutDog() {
 		input name: "modeReturn", type: "mode", title: "Change to Mode", required: false
 		input name: "lightsReturn", type: "capability.switch", multiple: true, title: "Lights Off", required: false
 		input name: "lockReturn", type: "capability.lock", title: "Lock Door", required: false
-    }
+    }    
+	section("Virtual Switch"){
+		input("virtualSwitch", "boolean", title: "Install Virtual Switch" )
+	}    
+	section("Notification"){
+		input("notifyTrigger", "boolean", title: "Notify When Triggerd", required: false)
+		input("notifyReturn", "boolean", title: "Notify When Returned", required: false)
+		input("notifyMsg", "text", title: "Notify Message", required: false)
+	}
   }
 }
 
 /* Initialization */
 def installed() {
     log.debug "Installed with settings: ${settings}"
-    addChildDevice("chuck-pearce", "Take out Dog", 'TakeOutDog', null, ["name": "Take Out Dog",  "completedSetup": true])
+    
+    if (virtualSwitch) {
+	    addVirtualSwitch()
+	}
 
     initialize()
 }
@@ -75,17 +84,27 @@ def installed() {
 def uninstalled() {
 	unschedule()
 	unsubscribe()
-	def deleteDevices = getAllChildDevices()
-	deleteDevices.each { deleteChildDevice(it.deviceNetworkId) }
+	if (virtualSwitch) {
+		def deleteDevices = getAllChildDevices()
+		deleteDevices.each { deleteChildDevice(it.deviceNetworkId) }
+	}
 }	
 
 def updated() { 
     log.debug "Updated with settings: ${settings}"
+    if (virtualSwitch) {
+		if (!getChildDevice("TakeOutDog")) {
+			addVirtualSwitch()
+		}
+    }
     initialize()
 }
 
-def initialize() { 
+def addVirtualSwitch () {
+	addChildDevice("chuck-pearce", "Take out Dog", 'TakeOutDog', null, ["name": "Take Out Dog",  "completedSetup": true])
+}
 
+def initialize() { 
 	if (lock) {
 		subscribe(lock, "lock", startTakeOut)
 	}
@@ -114,6 +133,18 @@ def startTakeOut(lock) {
 	
 	if (lock && lock.value != "unlocked") {
 		return
+	}
+
+    if (virtualSwitch) {
+		def child = getChildDevice("TakeOutDog")
+		child.updateDeviceStatus(1)
+	}
+
+	if (notifyTrigger) {
+		if (!notifyMsg) {
+			notifyMsg = "Taking the dog out"
+		}
+		sendPush( notifyMsg + " started")
 	}
 
 	state.closeCount = 0
@@ -152,11 +183,20 @@ def endTakeOut() {
 	unschedule()
 	unsubscribe()
     
-	def child = getChildDevice("TakeOutDog");
-	child.updateDeviceStatus(0)
+    if (virtualSwitch) {
+		def child = getChildDevice("TakeOutDog")
+		child.updateDeviceStatus(0)
+	}
 
 	if (modeReturn) {
 		setLocationMode(modeReturn)
+	}
+
+	if (notifyReturn) {
+		if (!notifyMsg) {
+			notifyMsg = "Taking the dog out"
+		}
+		sendPush( notifyMsg + " ended")
 	}
 
 	if (settings.homePhrasesReturn) {
