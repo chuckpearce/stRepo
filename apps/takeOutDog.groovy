@@ -36,16 +36,16 @@ def TakeOutDog() {
     
     
 	section("Auto Trigger When"){
-		input("lock", "capability.lock", title: "Lock", required: false)
+		input("lock", "capability.lock", title: "Lock is Unlocked", required: false)
 		input("timeStart", "time", title: "Time Start", required: false)
 		input("timeEnd", "time", title: "Time End", required: false)
-		input("modes", "mode", multiple: true, title: "Modes", required: false)
+		input("modes", "mode", multiple: true, title: "Enabled Modes", required: false)
 	}
 	section("Actions When Enabled") {
 		if (phrases) {
-        	input name: "homePhrasesEnabled", type: "enum", title: "Home Mode Phrase", multiple: true,required: false, options: phrases, refreshAfterSelection: true
+        	input name: "homePhrasesEnabled", type: "enum", title: "Execute Hello Home", multiple: true,required: false, options: phrases, refreshAfterSelection: true
 		}
-		input name: "modeEnabled", type: "mode", title: "Mode", required: false
+		input name: "modeEnabled", type: "mode", title: "Change to Mode", required: false
 		input name: "lightsEnabled", type: "capability.switch", multiple: true, title: "Lights On", required: false
      
     }
@@ -55,9 +55,9 @@ def TakeOutDog() {
 	}
     section("Trigger When Returned") {
       if (phrases) {
-        input name: "homePhrasesReturn", type: "enum", title: "Home Mode Phrase", multiple: true,required: false, options: phrases, refreshAfterSelection: true
+        input name: "homePhrasesReturn", type: "enum", title: "Execute Hello Home", multiple: true,required: false, options: phrases, refreshAfterSelection: true
       }
-		input name: "modeReturn", type: "mode", title: "Mode", required: false
+		input name: "modeReturn", type: "mode", title: "Change to Mode", required: false
 		input name: "lightsReturn", type: "capability.switch", multiple: true, title: "Lights Off", required: false
 		input name: "lockReturn", type: "capability.lock", title: "Lock Door", required: false
     }
