@@ -144,7 +144,7 @@ def startTakeOut(lock) {
 		if (!notifyMsg) {
 			notifyMsg = "Taking the dog out"
 		}
-		sendPush( notifyMsg + " started")
+		sendPush( "$notifyMsg started")
 	}
 
 	state.closeCount = 0
@@ -194,9 +194,9 @@ def endTakeOut() {
 
 	if (notifyReturn) {
 		if (!notifyMsg) {
-			notifyMsg = "Taking the dog out"
+			def notifyMsg = "Taking the dog out"
 		}
-		sendPush( notifyMsg + " ended")
+		sendPush( "$notifyMsg ended")
 	}
 
 	if (settings.homePhrasesReturn) {
