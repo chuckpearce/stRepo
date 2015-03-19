@@ -131,6 +131,10 @@ private getModeOk() {
 
 def startTakeOut(lock) {
 	
+	if (!getTimeOk() || !getModeOk()) {
+		return
+	}
+
 	if (lock && lock.value != "unlocked") {
 		return
 	}
