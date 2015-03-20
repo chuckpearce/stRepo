@@ -1,0 +1,22 @@
+{
+  "name": "WebServiceSerialBridge",
+  "description": "NodeJS Application to support SmartThings applications needing to connect to a TCP/IP serial bridge",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "moment": "",
+    "express": "",
+    "body-parser": "",
+    "basic-auth": ""
+  },
+  "engines": {
+    "node": "0.12.x"
+  },
+  "private": false
+}
