@@ -1,0 +1,55 @@
+Zone status response: 400100
+Debug Starting to execute schedule 1 and state of false
+Debug Starting to execute schedule 2 and state of false
+Debug Starting to execute schedule 3 and state of false
+Debug Starting to execute schedule 4 and state of false
+Debug Starting to execute schedule 5 and state of false
+Debug Starting to execute schedule 6 and state of false
+Checking connection status
+Connection status response: 700176
+Checking zone status
+Zone status response: 400100
+Debug We are running false
+Debug Starting to toggle zone null for true false
+Changing status of zone 6: true
+Zone change response: 400136
+Debug Zone toggle response 200
+Debug WTF!!!
+Debug true and true and false and false
+Debug Scheduling off for 6 in 300
+Debug Scheduling off for 6
+Debug Starting to toggle zone null for false true
+Changing status of zone 6: false
+Zone change response: 400146
+Debug Zone toggle response 200
+Debug WTF!!!
+Debug false and true and true and false
+Debug Paused on 6 for 2 minutes and Pause duration for 4.7665333333
+Debug Resuming watering 0 and [contactTrigger:false, watering:true, failures:0,
+pausedOn:0, lastWaterDate:1427333753308, waterStatus:Currently Watering, zoneSta
+rtTime:1427333760400, currentWatering:6, pausedDuration:0, polling:[runNow:true,
+ last:1426795808531]] and [contactTrigger:false, watering:true, failures:0, paus
+edOn:0, lastWaterDate:1427333753308, waterStatus:Currently Watering, zoneStartTi
+me:1427333760400, currentWatering:6, pausedDuration:0, polling:[runNow:true, las
+t:1426795808531]]
+Debug Starting to execute schedule 0 and state of true
+Debug Resuming watering 0 and [contactTrigger:false, watering:true, failures:0,
+pausedOn:0, lastWaterDate:1427333753308, waterStatus:Currently Watering, zoneSta
+rtTime:1427333760400, currentWatering:6, pausedDuration:0, polling:[runNow:true,
+ last:1426795808531]] and [contactTrigger:false, watering:true, failures:0, paus
+edOn:0, lastWaterDate:1427333753308, waterStatus:Currently Watering, zoneStartTi
+me:1427333760400, currentWatering:6, pausedDuration:0, polling:[runNow:true, las
+t:1426795808531]]
+Debug Starting to execute schedule 0 and state of true
+Debug Resuming watering 0 and [contactTrigger:false, watering:true, failures:0,
+pausedOn:0, lastWaterDate:1427333753308, waterStatus:Currently Watering, zoneSta
+rtTime:1427333760400, currentWatering:6, pausedDuration:0, polling:[runNow:true,
+ last:1426795808531]] and [contactTrigger:false, watering:true, failures:0, paus
+edOn:0, lastWaterDate:1427333753308, waterStatus:Currently Watering, zoneStartTi
+me:1427333760400, currentWatering:6, pausedDuration:0, polling:[runNow:true, las
+t:1426795808531]]
+Debug Starting to execute schedule 0 and state of true
+Checking zone status
+Zone status response: 400100
+Checking zone status
+Zone status response: 400100
