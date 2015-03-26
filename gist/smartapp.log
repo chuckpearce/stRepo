@@ -38,9 +38,9 @@
 4aaee237-1dc5-41e6-9f30-b01919362050 9:35:53 PM: debug 1
 4aaee237-1dc5-41e6-9f30-b01919362050 9:35:53 PM: debug Start looping through scheduled zones
 4aaee237-1dc5-41e6-9f30-b01919362050 9:35:53 PM: debug getChildDevices(true), children=8
-4aaee237-1dc5-41e6-9f30-b01919362050 9:35:53 PM: info Checking today's percipitation for 32256: 0.0 in
+4aaee237-1dc5-41e6-9f30-b01919362050 9:35:53 PM: info Checking today's percipitation for 00000: 0.0 in
 4aaee237-1dc5-41e6-9f30-b01919362050 9:35:53 PM: debug 0.02
-4aaee237-1dc5-41e6-9f30-b01919362050 9:35:53 PM: info Checking yesterday's percipitation for 32256: 0.02 in
+4aaee237-1dc5-41e6-9f30-b01919362050 9:35:53 PM: info Checking yesterday's percipitation for 00000: 0.02 in
 4aaee237-1dc5-41e6-9f30-b01919362050 9:35:52 PM: debug Start yesterday
 4aaee237-1dc5-41e6-9f30-b01919362050 9:35:52 PM: debug Start check
 4aaee237-1dc5-41e6-9f30-b01919362050 9:35:52 PM: trace Rain8Net Poller is attempting to unsubscribe from all events
@@ -67,4 +67,4 @@
 4aaee237-1dc5-41e6-9f30-b01919362050 9:34:13 PM: trace Rain8Net Poller is attempting to unsubscribe from all events
 4aaee237-1dc5-41e6-9f30-b01919362050 9:34:13 PM: trace Deleting all scheduled jobs for InstalledSmartApp: 4aaee237-1dc5-41e6-9f30-b01919362050
 4aaee237-1dc5-41e6-9f30-b01919362050 9:34:12 PM: debug getChildDevices(true), children=8
-4aaee237-1dc5-41e6-9f30-b01919362050 9:34:12 PM: debug Updated with settings: [username:admin, password:*****, server:98.231.16.25, port:8082, polling:5, z1name:Front Lawn, z1duration:0, z2name:Shrubs, z2duration:0, z3name:Right Side, z3duration:0, z4name:Left Back Grass, z4duration:0, z5name:Left Grass And Rear, z5duration:0, z6name:None, z6duration:5, z7name:None, z7duration:5, z8name:None, z8duration:2, days:[Tuesday, Wednesday, Saturday, Thursday, Monday, Friday, Sunday], waterTime:2015-03-25T21:36:00.000-0400, notifySchedule:false, notifyFail:false, zipcode:32256, isYesterdaysRainEnabled:true, isTodaysRainEnabled:true, isForecastRainEnabled:false, contact:[Back Door, Front Door], inhibitDuration:10, waterDays:[Thursday, Tuesday], Days:[Thursday, Sunday]] 
+4aaee237-1dc5-41e6-9f30-b01919362050 9:34:12 PM: debug Updated with settings: [username:admin, password:*****, server:98.231.16.25, port:8082, polling:5, z1name:Front Lawn, z1duration:0, z2name:Shrubs, z2duration:0, z3name:Right Side, z3duration:0, z4name:Left Back Grass, z4duration:0, z5name:Left Grass And Rear, z5duration:0, z6name:None, z6duration:5, z7name:None, z7duration:5, z8name:None, z8duration:2, days:[Tuesday, Wednesday, Saturday, Thursday, Monday, Friday, Sunday], waterTime:2015-03-25T21:36:00.000-0400, notifySchedule:false, notifyFail:false, zipcode:00000, isYesterdaysRainEnabled:true, isTodaysRainEnabled:true, isForecastRainEnabled:false, contact:[Back Door, Front Door], inhibitDuration:10, waterDays:[Thursday, Tuesday], Days:[Thursday, Sunday]] 
