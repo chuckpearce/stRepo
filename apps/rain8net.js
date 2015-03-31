@@ -1,6 +1,6 @@
 /**
  *	Web Service Bridge SmartApp
- * 
+ *
  *  Author: Chuck Pearce
  *  Date: 2015-03-10
  *
@@ -62,14 +62,14 @@ preferences {
 		input("z8duration", "text", title: "Run Time", description: "Duration (min) zone should run")
 	}
 	section("Schedule"){
-		input("Days", "enum", title: "Water Days", description: "Days of the week to water", multiple: true, required: true, options: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"])
+		input("days", "enum", title: "Water Days", description: "Days of the week to water", multiple: true, required: true, options: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"])
 		input("waterTime", "time", title: "Start Time", required: true, description: "When to start watering")
 	}
 	section("Notification"){
 		input("notifySchedule", "boolean", title: "Notify on Schedule", required: false)
 		input("notifyFail", "boolean", title: "Notify on Failure", required: false)
 	}
-    
+
     section("Virtual Rain Gauge") {
         input "zipcode", "text", title: "Zipcode?", required: false
     	input "isYesterdaysRainEnabled", "boolean", title: "Yesterday's Rain", description: "Include?", defaultValue: "true", required: false
@@ -83,7 +83,7 @@ preferences {
         input "inhibitDuration", "number", title: "Duration to Pause (min)", required: false
 
     }
-		
+
 }
 
 /* Initialization */
@@ -110,23 +110,28 @@ def uninstalled() {
 
 
 def disconnected () {
-	def childDevice = getAllChildDevices()
-	childDevice.each { 
-		if (it.deviceNetworkId.toString() != "SprinklerStatus|0") {
-			it.updateDeviceStatus(2)
+	if (state.failures >= 3) {
+		def childDevice = getAllChildDevices()
+		childDevice.each {
+			if (it.deviceNetworkId.toString() != "SprinklerStatus|0") {
+				it.updateDeviceStatus(2)
+			}
 		}
+		state.failures = 0
+	} else {
+		state.failures = (1 + state.failures)
 	}
 }
 
-def updated() { 
+def updated() {
     log.debug "Updated with settings: ${settings}"
 
 	def childDevice = getAllChildDevices()
 	childDevice.each {
 		switch ( getChildZoneID(it).split("\\|")[1] ) {
 		    case "1":
-		    	if (z1name) { it.name = z1name }	
-                break	    	
+		    	if (z1name) { it.name = z1name }
+                break
 		    case "2":
 		    	if (z2name) { it.name = z2name }
                 break
@@ -154,12 +159,36 @@ def updated() {
     initialize()
 }
 
-def initialize() { 
+def resetStatus () {
 
+		def childDevice = getAllChildDevices()
+		childDevice.each {
+			if (it.deviceNetworkId.toString() != "SprinklerStatus|0") {
+				it.updateDeviceStatus(0)
+			}
+		}
+}
+
+def initialize() {
+	//resetStatus()
+
+	unschedule()
+	unsubscribe()
+	state.watering = false
+	state.pausedDuration = 0
+	state.waterStatus = ""
+	state.pausedOn = 0
+	state.failures = 0
+	state.contactTrigger = false
 	unschedule("getZoneStatus")
 	unschedule("executeSchedule")
 	schedule("0 0/" + ((settings.polling.toInteger() > 0 )? settings.polling.toInteger() : 1)  + " * * * ?", "getZoneStatus" )
-	
+
+	def childDevice = getAllChildDevices()
+	childDevice.each {
+		subscribe(it, "switch", childEvent)
+	}
+
 	if (waterTime) {
 		schedule(waterTime, "executeSchedule")
 	}
@@ -213,11 +242,10 @@ def waterDays() {
 	if(!days) return true
 
 	def today = new Date().format("EEEE", location.timeZone)
-	log.debug "today: ${today}, days: ${days}"
- 		if (Days.contains(today)) { 
- 			return true
+ 	if (days.contains(today)) {
+ 		return true
     }
-    log.trace"water heater is not scheduled for today"
+
     return false
 }
 
@@ -225,22 +253,40 @@ def clearPause () {
 	state.pausedDuration = 0
 
 	def childDevice = getAllChildDevices()
-	childDevice.each { 				
-        if (it.deviceNetworkId != "SprinklerStatus|0") {
+	childDevice.each {
+		def currentStatus = it.currentValue("switch")
+        if ( (it.deviceNetworkId != "SprinklerStatus|0") && (currentStatus != "scheduled") && (currentStatus != "watered")  && (currentStatus != "offline")) {
 			it.updateDeviceStatus(0)
 		}
 	}
 }
 
-def contactOpen () {
-	unsubscribe()
+def childEvent (evt) {
+	if (evt.isStateChange() && evt.value == "paused") {
+		def zone = evt.data.split("~")[0]
+
+		def child = getChildDevice(zone)
+		toggleZoneStatus(child, "false")
+		pauseSchedule(child, 2)
+	}
+}
+
+def contactOpen (evt) {
+	unsubscribe(contact)
 	child = getChildDevice("SprinklerZone|$state.currentWatering");
 	state.contactTrigger = true
 	toggleZoneStatus(child, "false")
+
 	pauseSchedule(child, inhibitDuration ? inhibitDuration : 10 )
 }
 
 def executeSchedule (valve = 1) {
+
+	// Sanity check
+
+	if (valve > 8) {
+		return
+	}
 	// Verify we have a good connection
 	// Verify all zones are off
 	// Verify zone X is available
@@ -251,56 +297,60 @@ def executeSchedule (valve = 1) {
 		return
 	}
 
-	if (contact && state.watering) {
-		unsubscribe()
-		subscribe(contact, "contact.open", contactOpen)
-	}
-
-	var rainGauge = isRainDelay()
-
-	if (rainGauge > (wetThreshold?.toFloat() ?: 0.5)) {
-		sendEvent(name: "Rain8Net Poller", value: "inhibit", display: true, descriptionText: "Lawn will not be watered today. It has rained $rainGauge in.")
-		state.waterStatus = "Rain Inhibit - $rainGauge in"
-	}
-
-	if (!state.watering) {
-		sendEvent(name: "Rain8Net Poller", value: "on", display: true, descriptionText: "Starting to water the lawn")
-		state.waterStatus = "Currently Watering"
-		state.lastWaterDate = new Date().format("dd/MM/yyyy")
-
-		// Set the status to Scheduled
-		def childDevice = getAllChildDevices()
-		childDevice.each { 
-			if (it.deviceNetworkId.toString() != "SprinklerStatus|0") {
-				it.updateDeviceStatus(3)
-			}
-		}
-
-		if (notifySchedule) {
-			sendPush( "Starting to water the lawn")
-		}
-	} else if ( (state.watering) && (valve > 8) ){
-		state.watering = false
-		state.currentWatering = 0
-		sendEvent(name: "Rain8Net Poller", value: "off", display: true, descriptionText: "Ending watering the lawn")
-		state.waterStatus = "Completed Today"
-		if (notifySchedule) {
-			sendPush( "Ending watering the lawn")
-		}
-		return
-	} else {
-		state.watering = true
-	}
-
-	// Verify we have a connection to the rain8 device
 	def valveDuration = lookupValveDuration(valve) * 60;
 
-	if (state.pausedDuration > 0) {
-		valveDuration = state.pausedDuration
-		clearPause()
-	}
-	
 	if (valveDuration > 0) {
+		unsubscribe(contact)
+
+		if (contact && state.watering) {
+			subscribe(contact, "contact.open", contactOpen)
+		}
+
+		def rainGauge = isRainDelay()
+
+		if (rainGauge > (wetThreshold?.toFloat() ?: 0.5)) {
+			sendEvent(name: "Rain8Net Poller", value: "inhibit", display: true, descriptionText: "Lawn will not be watered today. It has rained $rainGauge in.")
+			state.waterStatus = "Rain Inhibit - $rainGauge in"
+		}
+
+		if (!state.watering) {
+			sendEvent(name: "Rain8Net Poller", value: "on", display: true, descriptionText: "Starting to water the lawn")
+			state.waterStatus = "Currently Watering"
+			state.lastWaterDate = now()
+			state.watering = true
+			// Set the status to Scheduled
+			def childDevice = getAllChildDevices()
+			childDevice.each {
+				if (it.deviceNetworkId.toString() != "SprinklerStatus|0" && ( lookupValveDuration(it.deviceNetworkId.split("\\|")[1]) > 0 ) ) {
+					it.updateDeviceStatus(3)
+				}
+			}
+
+			log.debug "Sending push to start watering the lawn $state.watering $valve"
+			if (notifySchedule) {
+				sendPush( "Starting to water the lawn")
+			}
+		} else if ( (state.watering) && (valve > 8) ){
+			state.watering = false
+			state.currentWatering = 0
+			sendEvent(name: "Rain8Net Poller", value: "off", display: true, descriptionText: "Ending watering the lawn")
+			state.waterStatus = "Completed Today"
+			clearPause()
+
+			log.debug "Sending push to stop watering the lawn $state.watering $valve"
+			if (notifySchedule) {
+				sendPush( "Ending watering the lawn")
+			}
+			return
+		}
+
+		// Verify we have a connection to the rain8 device
+
+		if (state.pausedDuration > 0) {
+			valveDuration = state.pausedDuration * 60
+			clearPause()
+		}
+
 		webServiceCall("/rain8/connection", []) { response ->
 			if (response.status == 200) {
 				// Verify all zones are currently off
@@ -311,13 +361,16 @@ def executeSchedule (valve = 1) {
 							running = true
 						}
 					}
+				}
 
 					if (running) {
 						sendEvent(name: "Rain8Net Poller", value: "fail", display: true, descriptionText: "Active zones are preventing execution of schedule")
 					} else {
 						// Turn on the zone
-						toggleZoneStatus(valve, "true");
+
+						toggleZoneStatus(valve, "true")
 						state.currentWatering = valve
+
 						switch (valve.toInteger()) {
 							case 1:
 								runIn( valveDuration.toInteger(), toggleScheduleValve1)
@@ -437,12 +490,14 @@ def webServiceCall (path, query = [], callback = {}) {
     		callback(response)
     	}
 	} catch(Exception e) {
+		disconnected()
+
 		log.debug "ERROR: Making web service call to $path" + e
 	}
 
 }
 def getZoneStatus () {
-	
+
 	def call = [
 	    uri: "http://$username:$password@$server:$port",
 	    path: "/rain8/status",
@@ -450,16 +505,18 @@ def getZoneStatus () {
 	]
 
 	try{
-    	httpGet(call) { response ->        
+    	httpGet(call) { response ->
     		def childDevice = getAllChildDevices()
-			childDevice.each { 				
+			childDevice.each {
                 if (it.deviceNetworkId != "SprinklerStatus|0") {
 	            	def status = "${response.data[it.deviceNetworkId.split("\\|")[1]]}"
 	                state.failures = 0
 
+	                def currentStatus = it.currentValue("switch")
+
 					if (status.toString() == "on") {
 						it.updateDeviceStatus(1)
-					} else {
+					} else if (currentStatus == "offline" || currentStatus == "on") {
 						it.updateDeviceStatus(0)
 					}
 				}
@@ -467,13 +524,8 @@ def getZoneStatus () {
 		}
 	} catch(Exception e)
 	{
-	  	log.debug "___exception getting stats: " + e
-	  	if (state.failures >= 3) {
-			disconnected()
-	  	} else {
-		  	runIn(60, getZoneStatus)
-		  	state.failures = (1 + state.failures)
-	  	}
+	  log.debug "___exception getting stats: " + e
+		disconnected()
 	}
 
 }
@@ -486,9 +538,9 @@ def allOff ( ) {
 	]
 	try{
     	httpGet(call) { response ->
-			if (response == "Success") {
-				log.debug "All zones have been turned off"
-			}
+			log.debug "All zones have been turned off"
+			clearPause()
+			initialize()
 		}
 	} catch(Exception e)
 	{
@@ -498,12 +550,12 @@ def allOff ( ) {
 }
 
 def pauseSchedule (child, duration) {
-	sendEvent(name: "Rain8Net Poller", value: "paused", display: true, descriptionText: "Watering the lawn has been paused for $duration minutes")
+	sendEvent(name: "Rain8Net Poller", value: "paused", display: true, descriptionText: "Watering the lawn has been paused for $duration minutes", data: getChildZoneID(child).split("\\|")[1])
 	state.waterStatus = "Currently Paused"
 	state.pausedOn = getChildZoneID(child).split("\\|")[1]
 	child.updateDeviceStatus(4)
-	state.pausedDuration = lookupValveDuration(state.pausedOn.toString()) - (((now() - state.zoneStartTime) / 1000) / 60)
-	log.debug "Paused on $state.pausedOn and Pause duration for $state.pausedDuration"
+	unschedule("toggleScheduleValve$state.pausedOn")
+	state.pausedDuration = lookupValveDuration(state.pausedOn.toString()) - (((now() - state.zoneStartTime) / 1000) / 60 )
 	runIn(duration * 60, resumePausedSchedule)
 }
 
@@ -530,8 +582,9 @@ def toggleZoneStatus ( child, value ) {
 		}
 	} catch (Exception e){
 		zoneID = getChildZoneID(child).split("\\|")[1]
-			fromButton = true;
+		fromButton = true;
 	}
+			webServiceCall("/rain8/debug", [msg: "Starting to toggle zone $zoneId for $value $fromButton"]) { resp -> }
 
 	def call = [
 	    uri: "http://$username:$password@$server:$port",
@@ -541,19 +594,41 @@ def toggleZoneStatus ( child, value ) {
 	]
 	try{
     	httpGet(call) { response ->
-    		log.debug "Zone toggle response ${response.status}"
-			if (response.status == 200) {
-				log.debug "Zone $zoneID set to status $value"
-				// Refresh all zones just in case
-				runIn(10, getZoneStatus)
 
-				if (value.toString() == "true") {
-					child.updateDeviceStatus(1)
-					state.zoneStartTime = now()
-				} else {
-					child.updateDeviceStatus(0)
+
+				if (!state.watering) {
+					runIn(30, getZoneStatus)
 				}
 
+				if (value.toString() == "true") {
+					state.zoneStartTime = now()
+					child.updateDeviceStatus(1)
+				} else {
+					/*
+					if (state.watering && child.currentValue("switch") == "paused" && fromButton) {
+						// Resume paused schedule
+						log.debug "Setting device to state 5"
+						child.updateDeviceStatus(1)
+					} else
+*/
+					if (state.watering && fromButton && !state.contactTrigger) {
+						// Pausing schedule from manual button press
+						log.debug "Pausing for 2 minutes due to button press"
+						//pauseSchedule(child, 2)
+					} else if (state.watering && (valve > 0) && (valve < 9) && !fromButton && !state.contactTrigger) {
+						// Watered
+						log.debug "Setting device to state 5"
+						child.updateDeviceStatus(5)
+						executeSchedule ( valve.toInteger() + 1 )
+					} else {
+						// Zone turned off manually
+						log.debug "Setting device to state 0"
+						child.updateDeviceStatus(0)
+					}
+
+				}
+
+/*
 				if (state.watering && value == "false" && child.currentValue("switch") == "paused" && fromButton) {
 					// End watering cycle
 					state.watering = false
@@ -566,10 +641,10 @@ def toggleZoneStatus ( child, value ) {
 				} else if ( (valve > 0) && (value == "false") && (valve < 9) && !fromButton && !state.contactTrigger) {
 					executeSchedule ( valve.toInteger() + 1 )
 				}
-			}
+*/
+			//}
 		}
-	} catch(Exception e)
-	{
+	} catch(Exception e) {
 	  log.debug "___exception toggling zone: " + e
 	  disconnected()
 	}
@@ -580,29 +655,26 @@ def getChildZoneID(child) {
 }
 
 /*
-* All credit for the rain functions goes to Stan Dotson (stan@dotson.info) and Matthew Nichols (matt@nichols.name)
+* All credit for the rain function goes to Stan Dotson (stan@dotson.info) and Matthew Nichols (matt@nichols.name)
 * Thanks to SmartSprinkler https://github.com/d8adrvn/smart_sprinkler
 */
 
-def isRainDelay() { 
+def isRainDelay() {
 
 	def rainGauge = 0
-    
-    	log.debug "Start check"
-    if (isYesterdaysRainEnabled.equals("true")) {    
-    	log.debug "Start yesterday"
-    	log.debug wasWetYesterday()    
+
+    if (isYesterdaysRainEnabled.equals("true")) {
     	rainGauge = rainGauge + 0
    	}
-    
+
     if (isTodaysRainEnabled.equals("true")) {
     	rainGauge = rainGauge + isWet()
     }
-    
+
     if (isForecastRainEnabled.equals("true")) {
     	rainGauge = rainGauge + isStormy()
   	}
-    
+
     return rainGauge
 
 }
@@ -643,5 +715,5 @@ def isStormy() {
 }
 
 /*
-* End code borrowed from Smart Sprinkler
+* End code hijacked from Smart Sprinkler
 */
