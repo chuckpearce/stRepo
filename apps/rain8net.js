@@ -170,7 +170,6 @@ def resetStatus () {
 }
 
 def initialize() {
-	//resetStatus()
 
 	unschedule()
 	unsubscribe()
@@ -273,7 +272,7 @@ def childEvent (evt) {
 
 def contactOpen (evt) {
 	unsubscribe(contact)
-	child = getChildDevice("SprinklerZone|$state.currentWatering");
+	def child = getChildDevice("SprinklerZone|$state.currentWatering");
 	state.contactTrigger = true
 	toggleZoneStatus(child, "false")
 
@@ -363,41 +362,39 @@ def executeSchedule (valve = 1) {
 					}
 				}
 
-					if (running) {
-						sendEvent(name: "Rain8Net Poller", value: "fail", display: true, descriptionText: "Active zones are preventing execution of schedule")
-					} else {
-						// Turn on the zone
+				if (running) {
+					sendEvent(name: "Rain8Net Poller", value: "fail", display: true, descriptionText: "Active zones are preventing execution of schedule")
+				} else {
+					// Turn on the zone
 
-						toggleZoneStatus(valve, "true")
-						state.currentWatering = valve
+					toggleZoneStatus(valve, "true")
+					state.currentWatering = valve
 
-						switch (valve.toInteger()) {
-							case 1:
-								runIn( valveDuration.toInteger(), toggleScheduleValve1)
-								break
-							case 2:
-								runIn( valveDuration.toInteger(), toggleScheduleValve2)
-								break
-							case 3:
-								runIn( valveDuration.toInteger(), toggleScheduleValve3)
-								break
-							case 4:
-								runIn( valveDuration.toInteger(), toggleScheduleValve4)
-								break
-							case 5:
-								runIn( valveDuration.toInteger(), toggleScheduleValve5)
-								break
-							case 6:
-								runIn( valveDuration.toInteger(), toggleScheduleValve6)
-								break
-							case 7:
-								runIn( valveDuration.toInteger(), toggleScheduleValve7)
-								break
-							case 8:
-								runIn( valveDuration.toInteger(), toggleScheduleValve8)
-								break
-						}
-
+					switch (valve.toInteger()) {
+						case 1:
+							runIn( valveDuration.toInteger(), toggleScheduleValve1)
+							break
+						case 2:
+							runIn( valveDuration.toInteger(), toggleScheduleValve2)
+							break
+						case 3:
+							runIn( valveDuration.toInteger(), toggleScheduleValve3)
+							break
+						case 4:
+							runIn( valveDuration.toInteger(), toggleScheduleValve4)
+							break
+						case 5:
+							runIn( valveDuration.toInteger(), toggleScheduleValve5)
+							break
+						case 6:
+							runIn( valveDuration.toInteger(), toggleScheduleValve6)
+							break
+						case 7:
+							runIn( valveDuration.toInteger(), toggleScheduleValve7)
+							break
+						case 8:
+							runIn( valveDuration.toInteger(), toggleScheduleValve8)
+							break
 					}
 				}
 			} else {
@@ -539,7 +536,8 @@ def allOff ( ) {
 	try{
     	httpGet(call) { response ->
 			log.debug "All zones have been turned off"
-			clearPause()
+			state.pausedDuration = 0
+			resetStatus()
 			initialize()
 		}
 	} catch(Exception e)
@@ -584,7 +582,6 @@ def toggleZoneStatus ( child, value ) {
 		zoneID = getChildZoneID(child).split("\\|")[1]
 		fromButton = true;
 	}
-			webServiceCall("/rain8/debug", [msg: "Starting to toggle zone $zoneId for $value $fromButton"]) { resp -> }
 
 	def call = [
 	    uri: "http://$username:$password@$server:$port",
