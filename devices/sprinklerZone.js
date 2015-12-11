@@ -43,7 +43,6 @@ def on() {
 }
 
 def off() {
-	log.debug "Are we watering: $parent.state.watering and $parent.state"
 
 	if (parent.state.watering) {
 		updateDeviceStatus(4)
@@ -69,21 +68,21 @@ def off() {
 	def updateDeviceStatus(status) {
 		// To-Do: Why do I have to pass the deviceNetworkId in this manner... If the state values were able to be passed from the child to the parent, it would resolve this.
 		if (status == 0) {
-			sendEvent(name: "switch", value: "off", display: true, descriptionText: device.displayName + " is off", data: this.device.deviceNetworkId + "~")
+			sendEvent(name: "switch", value: "off", display: true, descriptionText: device.displayName + " is off", data: [deviceNetworkId: this.device.deviceNetworkId])
 		}
 		if (status == 1) {
-			sendEvent(name: "switch", value: "on", display: true, descriptionText: device.displayName + " is on", data: this.device.deviceNetworkId + "~")
+			sendEvent(name: "switch", value: "on", display: true, descriptionText: device.displayName + " is on", data: [deviceNetworkId: this.device.deviceNetworkId])
 		}
 		if (status == 2) {
-			sendEvent(name: "switch", value: "offline", display: true, descriptionText: device.displayName + " is offline", data: this.device.deviceNetworkId + "~")
+			sendEvent(name: "switch", value: "offline", display: true, descriptionText: device.displayName + " is offline", data: [deviceNetworkId: this.device.deviceNetworkId])
 		}
 		if (status == 3) {
-			sendEvent(name: "switch", value: "scheduled", display: false, data: this.device.deviceNetworkId + "~")
+			sendEvent(name: "switch", value: "scheduled", display: false, data: [deviceNetworkId: this.device.deviceNetworkId])
 		}
 		if (status == 4) {
-			sendEvent(name: "switch", value: "paused", display: false, data: this.device.deviceNetworkId + "~")
+			sendEvent(name: "switch", value: "paused", display: false, data: [deviceNetworkId: this.device.deviceNetworkId])
 		}
 		if (status == 5) {
-			sendEvent(name: "switch", value: "watered", display: false, data: this.device.deviceNetworkId + "~")
+			sendEvent(name: "switch", value: "watered", display: false, data: [deviceNetworkId: this.device.deviceNetworkId])
 		}
 	}
