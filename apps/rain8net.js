@@ -13,7 +13,7 @@ definition(
 	namespace: "chuck-pearce",
 	author: "Chuck Pearce",
 	description: "Connect to local nodejs bridge for com based devices and access rain8.js",
-	category: "SmartThings Labs",
+    category: "Safety & Security",
 	iconUrl:   "http://i.imgur.com/Ln4BPWg.png",
 	iconX2Url: "http://i.imgur.com/Ln4BPWg.png",
 	iconX3Url: "http://i.imgur.com/Ln4BPWg.png"
@@ -156,6 +156,7 @@ def updated() {
 		}
 	}
 
+    log.debug "Settings updated"
     initialize()
 }
 
@@ -171,6 +172,7 @@ def resetStatus () {
 
 def initialize() {
 
+    log.debug "Initialize"
 	unschedule()
 	unsubscribe()
 	state.watering = false
@@ -181,6 +183,7 @@ def initialize() {
 	state.contactTrigger = false
 	unschedule("getZoneStatus")
 	unschedule("executeSchedule")
+    
 	schedule("0 0/" + ((settings.polling.toInteger() > 0 )? settings.polling.toInteger() : 1)  + " * * * ?", "getZoneStatus" )
 
 	def childDevice = getAllChildDevices()
@@ -190,8 +193,10 @@ def initialize() {
 
 	if (waterTime) {
 		schedule(waterTime, "executeSchedule")
+    	log.debug "Start switch ${waterTime}"
 	}
 
+    log.debug "Initialize DONE"
 /*
 
 http://community.smartthings.com/t/scheduling-via-cron/12697
@@ -261,12 +266,12 @@ def clearPause () {
 }
 
 def childEvent (evt) {
-	if (evt.isStateChange() && evt.value == "paused") {
-		def zone = evt.data.split("~")[0]
-
+	if (evt.isStateChange() && evt.value == "paused" && state.watering) {
+		def zoneNumber = evt.data.split(/,/)[0].replace("{\"deviceNetworkId\":\"SprinklerZone|","").replace("\"","")
+        def zone = "SprinklerZone|" + zoneNumber
 		def child = getChildDevice(zone)
 		toggleZoneStatus(child, "false")
-		pauseSchedule(child, 2)
+		pauseSchedule(child, inhibitDuration ? inhibitDuration : 10 )
 	}
 }
 
@@ -276,14 +281,26 @@ def contactOpen (evt) {
 	state.contactTrigger = true
 	toggleZoneStatus(child, "false")
 
-	pauseSchedule(child, inhibitDuration ? inhibitDuration : 10 )
+	//pauseSchedule(child, inhibitDuration ? inhibitDuration : 10 )
 }
 
 def executeSchedule (valve = 1) {
 
+    log.debug "START WATER"
 	// Sanity check
+	if ( (state.watering) && (valve > 8) ){
+		state.watering = false
+		state.currentWatering = 0
+		sendEvent(name: "Rain8Net Poller", value: "off", display: true, descriptionText: "Ending watering the lawn")
+		state.waterStatus = "Completed Today"
+		clearPause()
 
-	if (valve > 8) {
+		log.debug "Sending push to stop watering the lawn $state.watering $valve"
+		if (notifySchedule) {
+			sendPush( "Ending watering the lawn")
+		}
+		return
+	} else if (valve > 8) {
 		return
 	}
 	// Verify we have a good connection
@@ -329,18 +346,6 @@ def executeSchedule (valve = 1) {
 			if (notifySchedule) {
 				sendPush( "Starting to water the lawn")
 			}
-		} else if ( (state.watering) && (valve > 8) ){
-			state.watering = false
-			state.currentWatering = 0
-			sendEvent(name: "Rain8Net Poller", value: "off", display: true, descriptionText: "Ending watering the lawn")
-			state.waterStatus = "Completed Today"
-			clearPause()
-
-			log.debug "Sending push to stop watering the lawn $state.watering $valve"
-			if (notifySchedule) {
-				sendPush( "Ending watering the lawn")
-			}
-			return
 		}
 
 		// Verify we have a connection to the rain8 device
@@ -353,6 +358,7 @@ def executeSchedule (valve = 1) {
 		webServiceCall("/rain8/connection", []) { response ->
 			if (response.status == 200) {
 				// Verify all zones are currently off
+				/*
 				webServiceCall("/rain8/status", []) { statResp ->
 					def running = false
 					for (int i = 1; i < 9; i++) {
@@ -361,7 +367,7 @@ def executeSchedule (valve = 1) {
 						}
 					}
 				}
-
+				*/
 				if (running) {
 					sendEvent(name: "Rain8Net Poller", value: "fail", display: true, descriptionText: "Active zones are preventing execution of schedule")
 				} else {
@@ -494,7 +500,8 @@ def webServiceCall (path, query = [], callback = {}) {
 
 }
 def getZoneStatus () {
-
+	
+	log.debug "Get Zone Status"
 	def call = [
 	    uri: "http://$username:$password@$server:$port",
 	    path: "/rain8/status",
@@ -610,7 +617,7 @@ def toggleZoneStatus ( child, value ) {
 */
 					if (state.watering && fromButton && !state.contactTrigger) {
 						// Pausing schedule from manual button press
-						log.debug "Pausing for 2 minutes due to button press"
+						//log.debug "Pausing for 10 minutes due to button press"
 						//pauseSchedule(child, 2)
 					} else if (state.watering && (valve > 0) && (valve < 9) && !fromButton && !state.contactTrigger) {
 						// Watered
