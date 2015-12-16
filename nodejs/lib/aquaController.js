@@ -8,18 +8,20 @@ var port = config.aquaController.port;
 var net = require('net');
 
 var connected = false;
-
 var statusObject;
-establishConnecrtion();
-var client;
 
-function establishConnecrtion () {
+var client = net.connect(port, host, function(){
+   client.on('data', function(data) {
+	 netData += data;
+   });
+});
+
+function connect () {
 	client = net.connect(port, host, function(){
 	   client.on('data', function(data) {
-		 netData += data.toString();
+	   	 netData += data;
 	   });
 	});
-	
 }
 
 client.on('connect', function(err) {
@@ -28,6 +30,11 @@ client.on('connect', function(err) {
 });
 
 client.on('timeout', function(err) {
+	if (connected) {
+		setTimeout(function(){
+			connect()
+		}, 60000);
+	}
 	connected = false;
  console.log('timeout:', err.message);
 });
@@ -38,8 +45,8 @@ client.on('close', function(err) {
 });
 
 client.on('error', function(err) {
-	setTimeout(function(){ 
-		establishConnecrtion()
+	setTimeout(function(){
+		connect()
 	}, 15000);
  console.log('error:', err.message);
 });
@@ -82,7 +89,7 @@ function getStatus (callback) {
 function parseStatus (data) {
 	netData = "";
 	var statusArray = data.split( /\n/g );
-	
+
 	if (statusArray && statusArray[3]) {
 		statusObject = {
 			time: moment(statusArray[3].replace("\r",''), 'MMM DD YYYY HH:mm:ss').format("hh:mm a")
@@ -104,17 +111,21 @@ function parseStatus (data) {
 
 function parseSwitchStatus (data) {
 	var dataArray = data.split(/ /g);
-	var retArray = {
-		label: dataArray[1]
-		, status: dataArray[3]
-		, mode: ( dataArray[4].replace("\r",'').length > 0 ) ? dataArray[4].replace("\r",'') : dataArray[5].replace("\r",'')
-	};
+  if (dataArray[1] && (dataArray[4] || dataArray[5]) ) {
+  	var retArray = {
+  		label: dataArray[1]
+  		, status: dataArray[3]
+  		, mode: ( dataArray[4].replace("\r",'').length > 0 ) ? dataArray[4].replace("\r",'') : dataArray[5].replace("\r",'')
+  	};
 
-	return retArray;
+  	return retArray;
+  } else {
+    return {};
+  }
 }
 
 function resolveSwitchLabel(switchName, status, callback) {
-	
+
 	if (statusObject.length > 1) {
 		toggleSwitchMode ( statusObject[switchName].label, status, function (err, data) {
 			callback(err, data);
@@ -152,4 +163,4 @@ function toggleSwitchMode (switchLabel, status, callback) {
 // off XXX
 // auto XXX
 // d - lists all historical data
-// To-Do: find out how to set the time since my controller can't seem to keep time even over 24 hrs. 
+// To-Do: find out how to set the time since my controller can't seem to keep time even over 24 hrs.
