@@ -67,6 +67,7 @@ module.exports = function( app ){
 
 
 	app.get('/aquaController/toggle', function (req, res) {
+		console.log('Starting toggle session', req.query);
 		resolveSwitchLabel( req.query.name, req.query.status, function (err, data) {
 			getStatus (function (err, data) {
 				res.send(data);
@@ -125,7 +126,7 @@ function parseSwitchStatus (data) {
 }
 
 function resolveSwitchLabel(switchName, status, callback) {
-
+		
 	if (statusObject.length > 1) {
 		toggleSwitchMode ( statusObject[switchName].label, status, function (err, data) {
 			callback(err, data);
@@ -146,6 +147,7 @@ function toggleSwitchMode (switchLabel, status, callback) {
 	var cmd = status.concat(' ').concat(switchLabel);
 
 	console.log('Command', cmd);
+	
 	client.write(cmd);
 	  setTimeout(function () {
 	  	if (netData.toString() == cmd) {
