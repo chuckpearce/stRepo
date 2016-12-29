@@ -6,10 +6,12 @@
  *
  ***************************
  */
+
 metadata {
 	definition (name: "Aquarium Status", namespace: "chuck-pearce", author: "Chuck Pearce") {
 		capability "Refresh"
 		capability "Sensor"
+		capability "Switch"
 		capability "Temperature Measurement"
         attribute "aquariumTime", "string"
         attribute "ph", "string"
@@ -32,8 +34,23 @@ metadata {
 	            ]
 	        )
 		}
-	    valueTile("ph", "device.ph", decoration: "flat") {
-	        state("default", label:'${currentValue}')
+	    valueTile("ph", "device.ph") {
+	        state("default", label:'${currentValue}',
+            	backgroundColors:[
+	                [value: 7, color: "#153591"],
+	                [value: 7.40, color: "#1e9cbb"],
+	                [value: 7.80, color: "#90d2a7"],
+	                [value: 8.00, color: "#44b621"],
+	                [value: 8.30, color: "#f1d801"],
+	                [value: 8.50, color: "#d04e00"],
+	                [value: 9.00, color: "#bc2323"]
+	            ]
+            )
+		}
+		standardTile("feed", "device.feed", canChangeIcon: true) {
+			state("off", label:'', action: "on", icon: "st.Food & Dining.dining4-icn", backgroundColor: "#ffffff", nextState: "on")
+			state("on", label:'', action: "off", icon: "st.Food & Dining.dining4-icn", backgroundColor: "#79b821", nextState: "off")
+			state("offline", label:'', icon: "st.Food & Dining.dining4-icn", backgroundColor: "#ff0000", nextState: "off")
 		}
 	    valueTile("aquariumTime", "device.aquariumTime", decoration: "flat") {
 	        state("default", label:'${currentValue}')
@@ -42,26 +59,24 @@ metadata {
 			state("default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh")
 		}
 		main (["temperature", "ph", "aquariumTime"])
-		details(["temperature", "ph", "aquariumTime", "refresh"])
+		details(["temperature", "ph", "feed", "aquariumTime", "refresh"])
 	}
 }
 
 def parse(String description) { log.debug "description $description" }
 
+
 def refresh() {
-	parent.getStatus()
+    parent.getStatus()
 }
 
 def setTempPh (iTemp, iPh, time, date) {
 	sendEvent(name:"temperature",value:iTemp, unit: "F", descriptionText: "Aquarium Temp at $iTemp")
 	
-	// Handle pH
-	def formattedValue = iPh.toString()
-	def dispValue = "${formattedValue}\npH"
-    sendEvent(name: "ph", value: dispValue as String, unit: "", descriptionText: "Aquarium pH at ${formattedValue}")
+    sendEvent(name: "ph", value: iPh, unit: "", descriptionText: "Aquarium pH at $iPh")
 
     // Handle time
-    formattedValue = date.toString()
+    def formattedValue = date.toString()
 	def displayTime = "$formattedValue\n$time"
     sendEvent(name: "aquariumTime", value: displayTime as String, unit: "", descriptionText: "Aquarium time is ${time}", display: false)
 
@@ -69,6 +84,29 @@ def setTempPh (iTemp, iPh, time, date) {
 
 def poll() {}
 
+def on() {
+	// Turn off Defined switches
+ 
+    // switches that should turn off when feed cycle is started
+    def feedSwitches = [4, 5, 6, 7, 8]
+    // duration switches should be off before being automatically turned back on (minutes).
+    def feedTime = 60;
+    
+    for (int i = 0; i < feedSwitches.size(); i++) {
+        parent.toggleSwitchId( feedSwitches[i],"off")
+	}
+    
+    runIn(60*feedTime, off)
+}
+
+def off() {
+	unschedule()
+    def feedSwitches = [4, 5, 6, 7, 8]
+    
+    for (int i = 0; i < feedSwitches.size(); i++) {
+        parent.toggleSwitchId( feedSwitches[i],"auto")
+	}
+}
 
 def updateDeviceStatus(status) {
 
