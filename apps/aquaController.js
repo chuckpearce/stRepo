@@ -101,7 +101,7 @@ def initialize() {
 	unschedule()
 	unsubscribe()
     schedule("0 0/" + ((settings.polling.toInteger() > 0 )? settings.polling.toInteger() : 1)  + " * * * ?", getStatus )
-    subscriptions();
+    subscriptions()
 
     if (cleaningNotify && cleaningFreq > 0) { 
 	    if (!state.lastWaterChange) {
@@ -131,8 +131,8 @@ def feedReminder () {
 }
 
 def feedChangeNotify () {
+	def dayCheck = feedFreq.contains(new Date().format("EEEE"))
 
-	def dayCheck = feedFreq.contains(new Date().format("E"))
 	if(dayCheck){
 		if (feedNotify) {
 			sendPush( "Aquarium needs feeding")
@@ -177,7 +177,7 @@ def subscriptions () {
 		subscribe(child, "temperature", tempNotice)
 	}
 
-	if (timeDiff) {
+	if (timeDiff > 0) {
 		subscribe(child, "aquariumTime", timeNotice)
 	}
 }
@@ -266,10 +266,10 @@ def checkNoticePeriod (time) {
 	}
 }
 
-def toggleSwitch (child, status) {
+def toggleSwitchId (switchId, status) {
 
-	def switchName = state.switchNames[child.deviceNetworkId.split("\\|")[1].toInteger()]
-
+	def switchName = switchId
+    
 	log.debug "Switch name is $switchName"
 	def call = [
 	    uri: "http://$username:$password@$server:$port",
@@ -278,7 +278,30 @@ def toggleSwitch (child, status) {
 	    query: [name: "s" + switchName, status: status.toString()]
 	]
 
-	
+	try{
+    	httpGet(call) { response ->      
+        	
+		}
+	} catch(Exception e)
+	{
+		log.debug "___exception getting stats: " + e
+		disconnected()
+	}
+    
+}
+
+def toggleSwitch (child, status) {
+
+	def switchName = child.device.deviceNetworkId.split("\\|")[1].toInteger()
+    
+	log.debug "Switch name is $switchName"
+	def call = [
+	    uri: "http://$username:$password@$server:$port",
+	    path: "/AquaController/toggle",
+	    headers: ["Content-Type": "text/json"],
+	    query: [name: "s" + switchName, status: status.toString()]
+	]
+
 	try{
     	httpGet(call) { response ->      
         	
@@ -292,7 +315,7 @@ def toggleSwitch (child, status) {
 }
 
 
-def getStatus () {
+def getStatus () {    
 	state.switchNames = []
 
 	def call = [
@@ -304,7 +327,7 @@ def getStatus () {
 	
 	try{
     	httpGet(call) { response ->      
-        
+        	log.debug "Response is $response.data"
     		def childDevice = getAllChildDevices()
 
     		if (response.status == 500) {
@@ -333,7 +356,7 @@ def getStatus () {
                  	}
                   
                   	// Wrapped due to rouge switch that I do not have permission to access.
-                  	
+                  	/*
                   	try {
 	                    if (it.name.toString() == "Aquarium Switch " + sVal) {
 	                    	it.displayName = childData.label
@@ -341,7 +364,7 @@ def getStatus () {
                  	} catch (Exception e) {
 
                  	}
-                 	
+                 	*/
                 } catch (Exception e) {
                 	
                 }
