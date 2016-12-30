@@ -86,11 +86,12 @@ def poll() {}
 
 def on() {
 	// Turn off Defined switches
- 
+	sendEvent(name: "feed", value: "on", display: true, descriptionText: "Tank has entered feed mode")
+    
     // switches that should turn off when feed cycle is started
     def feedSwitches = [4, 5, 6, 7, 8]
     // duration switches should be off before being automatically turned back on (minutes).
-    def feedTime = 60;
+    def feedTime = 45
     
     for (int i = 0; i < feedSwitches.size(); i++) {
         parent.toggleSwitchId( feedSwitches[i],"off")
@@ -99,8 +100,11 @@ def on() {
     runIn(60*feedTime, off)
 }
 
-def off() {
+def off() {    
+	sendEvent(name: "feed", value: "off", display: true, descriptionText: "Tank has ended feed mode") 
+    
 	unschedule()
+    
     def feedSwitches = [4, 5, 6, 7, 8]
     
     for (int i = 0; i < feedSwitches.size(); i++) {
